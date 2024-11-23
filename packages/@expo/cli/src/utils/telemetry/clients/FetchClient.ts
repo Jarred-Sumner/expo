@@ -105,7 +105,20 @@ export class FetchClient implements TelemetryClient {
   }
 }
 
+declare const Bun:
+  | undefined
+  | {
+      // This fetch function in Bun is not configurable and not writable, so
+      // other libraries cannot override it.
+      fetch: typeof fetch;
+    };
+
 function createTelemetryFetch(): typeof fetch {
+  if (typeof Bun !== 'undefined') {
+    const fetch = Bun!.fetch;
+    return (info: RequestInfo | URL, init: RequestInit = {}) => fetch(extractUrl(info), init);
+  }
+
   const agent = new RetryAgent(new Agent(), {
     maxRetries: 3,
     retryAfter: true,
